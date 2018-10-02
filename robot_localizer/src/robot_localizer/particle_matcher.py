@@ -13,7 +13,7 @@ class ParticleMatcher(object):
     def match(self, particle_list, scan):
         #scan is a list of [angle, theta]
         weight_list = []
-        for i in len(particle_list)
+        for i in len(particle_list):
             #get angle in degrees for index of scan.
             min_dist = np.min(scan[:,1])
 
