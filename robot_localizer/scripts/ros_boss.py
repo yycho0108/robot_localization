@@ -38,9 +38,12 @@ class RosBoss(object):
         # Data
         self.scan_ = None
         self.pose_ = None
+        self.part_msg_ = PoseArray()
+        self.best_msg_ = PoseStamped()
 
         # ROS Handles
         self.part_pub_ = None
+        self.best_pub_ = None
         self.scan_sub_ = None
         self.odom_sub_ = None
         self.sync_sub_ = None # for synchronized version
@@ -83,6 +86,7 @@ class RosBoss(object):
     def start(self):
         """ register ROS handles and subscribe to all incoming topics """
         self.part_pub_ = rospy.Publisher('particles', PoseArray, queue_size=5)
+        self.best_pub_ = rospy.Publisher('best_particle', PoseStamped, queue_size=5)
         if self.sync_:
             scan_sub = message_filters.Subscriber('scan', LaserScan)
             odom_sub = message_filters.Subscriber('odom', Odometry) 
@@ -95,6 +99,13 @@ class RosBoss(object):
                 self.odom_sub_ = rospy.Subscriber('odom', Odometry, self.odom_cb)
         self.tfl_ = tf.TransformListener()
         self.tfh_ = TFHelper()
+
+    def particle_to_pose(self, p):
+        (x,y,h) = p
+        txn = [x,y,0]
+        rxn = tf.transformations.quaternion_about_axis(h, [0,0,1])
+        msg = self.tfh_.convert_translation_rotation_to_pose(txn,rxn)
+        return msg
 
     def publish(self, particles, best_particle):
         """Publish particles pose / visualization
@@ -109,8 +120,22 @@ class RosBoss(object):
         Returns:
             None
         """
-        #TODO: implement
-        pass
+        self.part_msg_.header.frame_id = 'map'
+        self.part_msg_.header.seq += 1
+        self.part_msg_.header.stamp = rospy.Time.now()
+
+        self.best_msg_.header.frame_id = 'map'
+        self.best_msg_.header.seq += 1
+        self.best_msg_.header.stamp = rospy.Time.now()
+
+        # populate poses
+        self.part_msg_.poses = [self.particle_to_pose(p) for p in particles]
+        self.part_pub_.publish(self.part_msg_)
+
+        self.best_msg_.pose = self.particle_to_pose(best_particle)
+        self.best_pub_.publish(self.best_msg_)
+
+        # TODO : publish best particle
 
     def get_odom(self):
         """ Get Pose from TF/Cached Msg """
@@ -141,10 +166,15 @@ class RosBoss(object):
 def main():
     rospy.init_node('ros_boss')
     rb = RosBoss(start=True)
+
+    ps = np.random.uniform(size=[10,3])
+    bp = np.mean(ps, axis=0)
+
     while not rospy.is_shutdown():
         odom, scan = rb.get_data() 
         if odom is not None and scan is not None:
             print odom, scan.shape
+        rb.publish(ps, bp)
 
 if __name__ == "__main__":
     main()
