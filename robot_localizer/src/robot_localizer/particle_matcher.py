@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-import OccupancyField
+from occupancy_field import OccupancyField
 
 class ParticleMatcher(object):
     #map is a 2D array passed with a singular data value on whether or not there is
     #something in the coordinate
     def __init__(self, map_):
         self.map_ = map_
-        OF = OccupancyField()
+        self.OF = OccupancyField()
 
 
     def match(self, particle_list, scan):
@@ -17,8 +17,7 @@ class ParticleMatcher(object):
             #get angle in degrees for index of scan.
             min_dist = np.min(scan[:,1])
 
-
-            dist = OF.get_closest_obstacle_distance(particle_list[i][0], particle_list[i][1])
+            dist = self.OF.get_closest_obstacle_distance(particle_list[i][0], particle_list[i][1])
             #get weight
             weight = 1 / np.absolute((min_dist - dist))
 

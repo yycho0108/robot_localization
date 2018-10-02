@@ -6,7 +6,7 @@ class ParticleFilter(object):
     def __init__(self):
         self.radius = 10 #the limit of how big the particle field is generated.
         self.theta_standard_deviation = .5 #Deviation from theta in radians.  Maxes at pi.
-        self.particle_field
+        self.particle_field = None
 
 
     def initialize(self, seed, num): #seed = initial pose.
