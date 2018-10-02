@@ -1,11 +1,16 @@
+#!/usr/bin/env python
 import rospy
 import tf
-import numpy as no
+import numpy as np
 
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Pose, PoseStamped, PoseArray
 from robot_localizer.tf_helper import TFHelper
+
+def anorm(x):
+    # TODO : replace with U.anorm when utils.py becomes available through PR
+    return (x+np.pi) % (2*np.pi) - np.pi
 
 class RosBoss(object):
     """Handles ROS I/O communications and conversions.
@@ -20,44 +25,74 @@ class RosBoss(object):
         pose_ (np.ndarray, optional): [3]  Latest pose, (x,y,h)
             note that pose_ is only supported when use_tf:=False.
     """
-    def __init__(self, use_tf=True):
+    def __init__(self, use_tf=True, start=True, sync=True, slop=0.01):
         """
         Args:
             use_tf(bool): Get Odom from tf (default : True)
+            sync(bool): Synchronize Odom-Scan Topics (only enabled if use_tf=False)
         """
         self.use_tf_ = use_tf
+        self.sync_   = (not use_tf) and sync
+        self.slop_   = slop
 
         # Data
-        self.scan_msg_ = None
-        self.scan_ = None 
+        self.scan_ = None
         self.pose_ = None
 
         # ROS Handles
+        self.part_pub_ = None
         self.scan_sub_ = None
         self.odom_sub_ = None
+        self.sync_sub_ = None # for synchronized version
         self.tfl_ = None
         self.tfh_ = None
 
-        self.subscribe()
+        if start:
+            self.start()
 
     def scan_cb(self, msg):
-        self.scan_msg_ = msg
+        """ store scan msg """
+        self.scan_= msg
+
+    def odom_cb(self, msg):
+        """ store odom msg """
+        self.odom_ = msg
+
+    def data_cb(self, scan_msg, odom_msg):
+        """ store synced scan/odom msg """
+        self.scan_cb(scan_msg)
+        self.odom_cb(odom_msg)
 
     def scan_proc(self):
         """ Process Scan Data.
+
         Note:
             assumes scan angle corresponds to (0-2*pi)
         """
-        angles = U.anorm(np.linspace(0, 2*np.pi, len(msg.ranges), endpoint=True))
-        ranges = np.asarray(msg.ranges, dtype=np.float32)
-        mask = (msg.range_min < ranges) & (ranges < msg.range_max)
-        self.scan_ = np.stack([angles[mask], ranges[mask]], axis=-1)
+        msg = self.scan_
+        if msg is not None:
+            self.scan_ = None # clear msg
+            angles = anorm(np.linspace(0, 2*np.pi, len(msg.ranges), endpoint=True))
+            ranges = np.asarray(msg.ranges, dtype=np.float32)
+            mask = (msg.range_min < ranges) & (ranges < msg.range_max)
+            return np.stack([angles[mask], ranges[mask]], axis=-1)
+        else:
+            rospy.loginfo_throttle(1.0, "No scan msg available")
+            return None
 
-    def subscribe(self):
-        """ subscribe to all incoming topics """
-        self.scan_sub_ = rospy.Subscriber('scan', LaserScan, self.scan_cb)
-        if not self.use_tf_:
-            self.odom_sub_ = rospy.Subscriber('odom', Odometry, self.odom_cb)
+    def start(self):
+        """ register ROS handles and subscribe to all incoming topics """
+        self.part_pub_ = rospy.Publisher('particles', PoseArray, queue_size=5)
+        if self.sync_:
+            scan_sub = message_filters.Subscriber('scan', LaserScan)
+            odom_sub = message_filters.Subscriber('odom', Odometry) 
+            self.sync_sub_ = message_filters.ApproximateTimeSynchronizer(
+                    [scan_sub, odom_sub], 10, self.slop_, allow_headerless=True)
+            self.sync_sub_.registerCallback(self.data_cb)
+        else:
+            self.scan_sub_ = rospy.Subscriber('scan', LaserScan, self.scan_cb)
+            if not self.use_tf_:
+                self.odom_sub_ = rospy.Subscriber('odom', Odometry, self.odom_cb)
         self.tfl_ = tf.TransformListener()
         self.tfh_ = TFHelper()
 
@@ -74,10 +109,11 @@ class RosBoss(object):
         Returns:
             None
         """
+        #TODO: implement
         pass
 
     def get_odom(self):
-        """ Get Pose from TF """
+        """ Get Pose from TF/Cached Msg """
         if self.use_tf_:
             try:
                 pose_tf = self.tfl_.lookupTransform('base_link', 'odom', rospy.Time(0))
@@ -87,13 +123,28 @@ class RosBoss(object):
             pose_msg = self.tfh_.convert_translation_rotation_to_pose(*pose_tf)
         else:
             pose_msg = self.pose_
+            self.pose_ = None # clear msg
         try:
             x,y,h = self.tfh_.convert_pose_to_xy_and_theta(pose_msg)
             return np.asarray([x,y,h])
         except Exception as e:
-            rospy.loginfo_throttle(1.0, 'Odom information not available : {}'.format(e))
+            rospy.loginfo_throttle(1.0, 'Odom information not available yet : {}'.format(e))
             return None
 
     def get_scan(self):
         """ Get latest scan """
-        return self.scan_
+        return self.scan_proc()
+
+    def get_data(self):
+        return self.get_odom(), self.get_scan()
+
+def main():
+    rospy.init_node('ros_boss')
+    rb = RosBoss(start=True)
+    while not rospy.is_shutdown():
+        odom, scan = rb.get_data() 
+        if odom is not None and scan is not None:
+            print odom, scan.shape
+
+if __name__ == "__main__":
+    main()
