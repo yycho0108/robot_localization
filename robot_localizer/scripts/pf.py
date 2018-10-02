@@ -5,10 +5,8 @@
 from __future__ import print_function, division
 import rospy
 from geometry_msgs.msg import PoseWithCovarianceStamped, PoseArray, Pose
-
-from helper_functions import TFHelper
+from robot_localizer.tf_helper import TFHelper
 from occupancy_field import OccupancyField
-
 
 class ParticleFilter(object):
     """ The class that represents a Particle Filter ROS Node
