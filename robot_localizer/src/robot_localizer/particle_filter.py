@@ -1,38 +1,8 @@
 #!/usr/bin/env python
 import numpy as np
 import utils as U
-
+from resample import resample
 from matplotlib import pyplot as plt
-
-class Resampler(object):
-    def __init__(self):
-        pass
-
-    def randomize(self, n):
-        u = np.empty(n, dtype=np.float32)
-        #mu_0 = (i_0 / T) #??
-        # mu???
-        mu_0 = (1.0 - mu ** (1.0 / (n+1)))
-        u[0] = (1 - mu) ** (1.0 / n)
-        for i in range(1,n):
-            u[i] = u[i-1] + (1 - u[i-1])(1 - mu) ** (1.0 / (n-i+1))
-        return u
-
-    def merge(self, s, w, u):
-        j = 0
-        t = u[0]
-        s2 = np.empty_like(s)
-        for i in range(n):
-            mu = u[i]
-            while mu < t:
-                t += w[j]
-                j += 1
-            s2[i] = s[j]
-        return s2
-
-    def __call__(self, s, w):
-        u = self.randomize()
-        return self.merge(s,w,u)
 
 class ParticleFilter(object):
     def __init__(self):
@@ -52,7 +22,8 @@ class ParticleFilter(object):
         self.particles_ += [[dx,dy,dh]]
         self.particles_[:,2] = U.anorm(self.particles_[:,2])
 
-    def resample(self, cost, eps=1e-3, copy=False, viz=False):
+    def resample(self, cost,
+            eps=1e-3, copy=False, viz=False):
         # cost -> probability
 
         if viz:
@@ -69,18 +40,21 @@ class ParticleFilter(object):
             plt.title('probability')
 
         # naive choice
-        idx = np.random.choice(self.size_, size=self.size_, p=prob)
-        if viz:
-            plt.figure()
-            plt.bar(range(self.size_), np.bincount(idx, minlength=self.size_))
-            plt.title('selection')
-        if viz:
-            plt.show()
-        particles = self.particles_[idx]
+        #idx = np.random.choice(self.size_, size=self.size_, p=prob)
+        #if viz:
+        #    plt.figure()
+        #    plt.bar(range(self.size_), np.bincount(idx, minlength=self.size_))
+        #    plt.title('selection')
+        #if viz:
+        #    plt.show()
+        #particles = self.particles_[idx]
+
+        # "perfect" resampler
+        self.particles_, _ = resample(self.particles_, prob)
         if copy:
-            return np.copy(particles)
+            return np.copy(self.particles_)
         else:
-            return particles
+            return self.particles_
 
 def main():
     pf = ParticleFilter()

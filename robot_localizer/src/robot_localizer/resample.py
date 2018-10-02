@@ -1,13 +1,9 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 def nform(n):
     return 1.0 - pow(np.random.uniform(), 1.0/(n+1))
 
-class Resampler(object):
-    def __init__(self):
-        pass
-    def __call__(self, ws, ps, n=None):
+def resample(ps, ws, n=None):
         m = len(ps)
         if n is None:
             n = m
@@ -20,7 +16,7 @@ class Resampler(object):
         ps2 = np.empty_like(ps)
         ws2 = np.empty_like(ws)
 
-        for i in range(n):
+        for i in range(n): # TODO : potentially slow?
             while (t + ws[j] < u0 and j < m):
                 t += ws[j]
                 j += 1
@@ -32,15 +28,17 @@ class Resampler(object):
         return ws2, ps2
 
 def main():
-    sampler = Resampler()
-    n = 100
+    from matplotlib import pyplot as plt
+    n = 1000
     ws = np.random.uniform(size=n)
-    ws = np.sort(ws)
+    ws = np.sort(ws, -1)
     ps = np.arange(n)
-    ws2, ps2 = sampler(ws,ps)
+    ws2, ps2 = resample(ps,ws)
 
-    plt.scatter(ps, ws/ws.sum(), color='r')
+    ws_r = np.convolve(ws, [0.25,0.5,0.25], 'same')
+    ws_r = ws_r/ws_r.sum()
     plt.hist(ps2, color='g', density=True)
+    plt.scatter(ps, ws_r, color='r')
     plt.show()
 
 if __name__ == '__main__':
