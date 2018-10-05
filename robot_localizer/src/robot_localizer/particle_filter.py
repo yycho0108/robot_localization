@@ -13,7 +13,7 @@ class ParticleFilter(object):
 
         # initialization parameters
         self.radius = 10 #the limit of how big the particle field is generated.
-        self.theta_standard_deviation = .5 #Deviation from theta in radians. Maxes at pi.
+        self.spread = .5 #radius, theta_std
 
     def initialize(self, size, seed=None, spread=[10.0,0.5]): #seed = initial pose.
         """ Initializes particles.
@@ -31,7 +31,7 @@ class ParticleFilter(object):
 
         Returns:
             None (internally modified)
-        
+
         """
         init_x = 0.0
         init_y = 0.0
@@ -47,12 +47,19 @@ class ParticleFilter(object):
         for i in range(size):
             #generate random coordinate in polar, radius from the start.
             ran_dist = random.uniform(0, spread[0])
-            ran_theta = random.gauss(init_theta, spread[1])
-            #convert to cartesian.
-            x = np.cos(ran_theta)*ran_dist + init_x
-            y = np.sin(ran_theta)*ran_dist + init_y
+            if seed:
+                #If there is a seed, then it will tend to center via gaussian.  If not, complete random.
+                ran_dir = random.gauss(init_theta, spread[1])
 
-            particle = [x,y,ran_theta]
+            else:
+                ran_dir = random.uniform(0, 2*np.pi)
+
+            #convert to cartesian.
+            ran_theta = random.uniform(0, 2*np.pi)
+            x = np.cos(ran_dir)*ran_dist + init_x
+            y = np.sin(ran_dir)*ran_dist + init_y
+
+            particle = [x,y,ran_dir]
             particle_field.append(particle)
 
         self.size_ = size
