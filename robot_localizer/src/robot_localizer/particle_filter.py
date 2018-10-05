@@ -45,12 +45,13 @@ class ParticleFilter(object):
         particle_field = []
 
         for i in range(size):
+            # TODO : fix distributions, spread, etc.
+
             #generate random coordinate in polar, radius from the start.
             ran_dist = random.uniform(0, spread[0])
             if seed:
                 #If there is a seed, then it will tend to center via gaussian.  If not, complete random.
                 ran_dir = random.gauss(init_theta, spread[1])
-
             else:
                 ran_dir = random.uniform(0, 2*np.pi)
 
@@ -59,35 +60,40 @@ class ParticleFilter(object):
             x = np.cos(ran_dir)*ran_dist + init_x
             y = np.sin(ran_dir)*ran_dist + init_y
 
-            particle = [x,y,ran_dir]
+            particle = [x,y,ran_theta]
             particle_field.append(particle)
 
         self.size_ = size
         self.particles_= np.asarray(particle_field, dtype=np.float32)
+        print np.std(self.particles_, axis=0)
 
     def update(self, odom):
         # assume odom = (v,w,dt)
         # if odom = (dx,dy,dh)
-        # dx, dy, dh = odom
+        dx, dy, dh = odom
         # elif odom = (v,w,dt)
         h = self.particles_[:,2]
-        dx = v * np.cos(h) * dt
-        dy = v * np.sin(h) * dt
-        dh = w * dt
+        #dx = v * np.cos(h) * dt
+        #dy = v * np.sin(h) * dt
+        #dh = w * dt
 
         self.particles_ += [[dx,dy,dh]]
         self.particles_[:,2] = U.anorm(self.particles_[:,2])
 
-    def resample(self, cost, noise=(0.0,0.0,0.0),
-            eps=1e-3, viz=False):
+    def resample(self, weight, noise=(0.0,0.0,0.0),
+            eps=1e-3, viz=False, inv=False):
         # cost -> probability
 
         if viz:
             plt.figure()
-            plt.bar(range(self.size_), cost)
-            plt.title('cost')
+            plt.bar(range(self.size_), weight)
+            plt.title('weight')
 
-        prob = 1.0 / (np.add(cost, eps))
+        if inv:
+            prob = 1.0 / (np.add(weight, eps))
+        else:
+            prob = weight
+
         prob /= np.sum(prob)
 
         if viz:
@@ -106,12 +112,16 @@ class ParticleFilter(object):
         #particles = self.particles_[idx]
 
         # "perfect" resampler
-        self.particles_, _ = resample(self.particles_, prob)
+        self.particles_, ws = resample(self.particles_, prob)
         self.particles_ = np.random.normal(self.particles_, scale=noise)
+
+        # TODO : better "best" particle
+        return self.particles_[np.argmax(ws)]
 
     @property
     def particles(self):
-        return np.copy(self.particles_)
+        return self.particles_
+        #return np.copy(self.particles_)
 
 def main():
     pf = ParticleFilter()
@@ -122,12 +132,12 @@ def main():
     ps0 = pf.particles
     cost0 = np.linalg.norm(ps0[:,:2], axis=-1) # test: cost by distance from zero
 
-    pf.resample(cost0, noise=(0.1,0.1,0.1))
+    pf.resample(cost0, noise=(0.1,0.1,0.1), inv=True)
     ps1 = pf.particles
     cost1 = np.linalg.norm(ps1[:,:2], axis=-1) # test: cost by distance from zero
 
-    plt.scatter(ps1[:,0], ps1[:,1], label='resample', s=50.0*(1.0 / cost1), alpha=1.0)
-    plt.scatter(ps0[:,0], ps0[:,1], label='original', s=50.0*(1.0 / cost0), alpha=0.5)
+    plt.scatter(ps1[:,0], ps1[:,1], label='resample', s=5.0*(cost0.max() / cost1), alpha=1.0)
+    plt.scatter(ps0[:,0], ps0[:,1], label='original', s=5.0*(cost1.max() / cost0), alpha=0.5)
     plt.legend()
     plt.show()
 
