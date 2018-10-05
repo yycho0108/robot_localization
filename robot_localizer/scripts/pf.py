@@ -107,7 +107,7 @@ class ParticleFilterROS(object):
             #print('ws', ws)
             #plt.scatter(ps[:,0], ps[:,1], label='resample', s=ws, alpha=1.0)
             #plt.show()
-            best = self.pf_.resample(ws)
+            best = self.pf_.resample(ws, noise=[0.1,0.1,0.3])
 
         self.rb_.publish(self.pf_.particles, best)
 
