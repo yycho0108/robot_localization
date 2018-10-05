@@ -17,6 +17,7 @@ from robot_localizer.particle_matcher import ParticleMatcher
 from std_srvs.srv import Empty, EmptyResponse
 
 from matplotlib import pyplot as plt
+import numpy as np
 
 class ParticleFilterROS(object):
     """ The class that represents a Particle Filter ROS Node
@@ -47,6 +48,7 @@ class ParticleFilterROS(object):
         #self.occupancy_field = OccupancyField()
         self.transform_helper = TFHelper()
         self.last_odom_ = None
+        self.delta_ = np.zeros(shape=3)
 
     def reset_cb(self, _):
         self.pf_.initialize(
@@ -68,7 +70,7 @@ class ParticleFilterROS(object):
         self.pf_.initialize(
                 size = 1000,
                 seed = xy_theta,
-                spread = [3.0, 6.28]
+                spread = [0.2, 0.5]
                 )
 
         ps = self.pf_.particles
@@ -96,18 +98,28 @@ class ParticleFilterROS(object):
             if self.last_odom_ is None:
                 self.last_odom_ = odom
             delta = odom - self.last_odom_
-            delta[2] = U.anorm(delta[2])
+            self.delta_ += np.abs(delta)
+
+            # inverse frame computation
+            dx,dy,dh = delta
+            c, s = np.cos(delta[2]), np.sin(delta[2])
+            delta[0] =  c*dx + s*dy
+            delta[1] = -s*dx + c*dy
+            delta[2] = U.anorm(dh)
+
             self.pf_.update(delta)
             self.last_odom_ = odom
 
         best = None
         if scan is not None:
             ps = self.pf_.particles
-            ws = self.pm_.match(self.pf_.particles, scan)
-            #print('ws', ws)
-            #plt.scatter(ps[:,0], ps[:,1], label='resample', s=ws, alpha=1.0)
-            #plt.show()
-            best = self.pf_.resample(ws, noise=[0.1,0.1,0.3])
+            if np.linalg.norm(self.delta_[:2]) > 0.3 or self.delta_[2] > np.deg2rad(30):
+                # moved 10cm or 10 deg
+                ws = self.pm_.match(self.pf_.particles, scan)
+                #print('ws', ws)
+                #plt.scatter(ps[:,0], ps[:,1], label='resample', s=ws, alpha=1.0)
+                #plt.show()
+                best = self.pf_.resample(ws, noise=[0.01,0.01,0.01])
 
         self.rb_.publish(self.pf_.particles, best)
 

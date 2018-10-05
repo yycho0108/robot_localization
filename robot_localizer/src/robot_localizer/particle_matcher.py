@@ -14,7 +14,7 @@ class ParticleMatcher(object):
     def match(self, particle_list, scan):
         #scan is a list of [angle, theta]
         min_dist = np.min(scan[:,1])
-        print('ps', particle_list)
+        #print('ps', particle_list)
         dist = [self.OF.get_closest_obstacle_distance(p[0], p[1]) for p in particle_list]
         dist = np.asarray(dist, dtype=np.float32)
 
@@ -23,7 +23,7 @@ class ParticleMatcher(object):
         #weight = cost.max() - cost + 0.01
         weight = 1.0 / (cost + 1e-02)
         weight[np.isnan(dist)] = 0 # set nan weight to zero to make sure it doesn't get sampled
-        print('ws', weight)
+        #print('ws', weight)
         return weight
 
         #weight_list = []

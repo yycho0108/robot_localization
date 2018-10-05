@@ -6,3 +6,5 @@ def anorm(x):
 def adiff(a,b):
     return anorm(a-b)
 
+def amean(x):
+    return np.arctan2(np.sin(x).sum(),np.cos(x).sum())

@@ -20,7 +20,7 @@ def resample(ps, ws, n=None):
             while (t + ws[j] < u0 and j < m):
                 t += ws[j]
                 j += 1
-            ps2[i] = ps[j]
+            ps2[i,:] = ps[j,:]
             ws2[i] = ws[j] * i_scale
 
             u0 = u0 + (scale - u0) * nform(n-i-1)

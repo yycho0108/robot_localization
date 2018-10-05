@@ -98,8 +98,14 @@ class ParticleFilter(object):
         #dy = v * np.sin(h) * dt
         #dh = w * dt
 
-        self.particles_ += [[dx,dy,dh]]
-        self.particles_[:,2] = U.anorm(self.particles_[:,2])
+        c_ = np.cos(self.particles_[:,2])
+        s_ = np.sin(self.particles_[:,2])
+
+        dx_ =  c_*dx - s_*dy
+        dy_ =  s_*dx + c_*dy
+
+        self.particles_[:,:2] += np.stack([dx_,dy_], axis=-1)
+        self.particles_[:,2] = U.anorm(self.particles_[:,2] + dh)
 
     def resample(self, weight, noise=(0.0,0.0,0.0),
             eps=1e-3, viz=False, inv=False):
@@ -136,11 +142,14 @@ class ParticleFilter(object):
         # "perfect" resampler
         print 'prob', np.min(prob), np.max(prob), np.std(prob)
         self.particles_, ws = resample(self.particles_, prob)
-        self.particles_ += np.random.normal(0.0, scale=noise)
-        #self.particles_ = np.random.normal(self.particles_, scale=noise)
+        #self.particles_ += np.random.normal(loc=0.0, scale=noise)
+        self.particles_ = np.random.normal(loc=self.particles_, scale=noise)
 
         # TODO : better "best" particle
-        return np.mean(self.particles_, axis=0)
+
+        x,y = np.mean(self.particles_[:,:2], axis=0)
+        h = U.amean(self.particles[:,2])
+        return [x,y,h]
 
         #return self.particles_[np.argmax(ws)]
 
