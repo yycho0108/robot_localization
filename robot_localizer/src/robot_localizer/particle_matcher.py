@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 
 from occupancy_field import OccupancyField
+import numpy as np
 
 class ParticleMatcher(object):
     #map is a 2D array passed with a singular data value on whether or not there is
     #something in the coordinate
-    def __init__(self, map_):
-        self.map_ = map_
+    def __init__(self):
+        #self.map_ = map_
         self.OF = OccupancyField()
 
 
     def match(self, particle_list, scan):
         #scan is a list of [angle, theta]
         weight_list = []
-        for i in len(particle_list):
+        for i in range(len(particle_list)):
             #get angle in degrees for index of scan.
             min_dist = np.min(scan[:,1])
 

@@ -101,7 +101,7 @@ class RosBoss(object):
         msg = self.tfh_.convert_translation_rotation_to_pose(txn,rxn)
         return msg
 
-    def publish(self, particles, best_particle):
+    def publish(self, particles, best_particle=None):
         """Publish particles pose / visualization
 
         Args:
@@ -115,16 +115,19 @@ class RosBoss(object):
         self.part_msg_.header.seq += 1
         self.part_msg_.header.stamp = rospy.Time.now()
 
-        self.best_msg_.header.frame_id = 'map'
-        self.best_msg_.header.seq += 1
-        self.best_msg_.header.stamp = rospy.Time.now()
+        if best_particle is not None:
+            self.best_msg_.header.frame_id = 'map'
+            self.best_msg_.header.seq += 1
+            self.best_msg_.header.stamp = rospy.Time.now()
 
         # populate poses
+        print 'length of particle : ', len(particles)
         self.part_msg_.poses = [self.particle_to_pose(p) for p in particles]
         self.part_pub_.publish(self.part_msg_)
 
-        self.best_msg_.pose = self.particle_to_pose(best_particle)
-        self.best_pub_.publish(self.best_msg_)
+        if best_particle is not None:
+            self.best_msg_.pose = self.particle_to_pose(best_particle)
+            self.best_pub_.publish(self.best_msg_)
 
     @property
     def odom(self):
