@@ -71,6 +71,11 @@ class OccupancyField(object):
         """ Compute the closest obstacle to the specified (x,y) coordinate in
             the map.  If the (x,y) coordinate is out of the map boundaries, nan
             will be returned. """
+
+        #print('what?')
+        #print(self.map.info.origin.position)
+        #print(self.map.info.resolution)
+
         x_coord = \
             int((x - self.map.info.origin.position.x)/self.map.info.resolution)
         y_coord = \

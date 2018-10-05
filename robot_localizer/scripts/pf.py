@@ -16,6 +16,8 @@ from robot_localizer.particle_filter import ParticleFilter
 from robot_localizer.particle_matcher import ParticleMatcher
 from std_srvs.srv import Empty, EmptyResponse
 
+from matplotlib import pyplot as plt
+
 class ParticleFilterROS(object):
     """ The class that represents a Particle Filter ROS Node
     """
@@ -65,8 +67,14 @@ class ParticleFilterROS(object):
 
         self.pf_.initialize(
                 size = 1000,
-                seed = xy_theta
+                seed = xy_theta,
+                spread = [3.0, 6.28]
                 )
+
+        ps = self.pf_.particles
+
+        #plt.scatter(ps[:,0], ps[:,1])
+        #plt.show()
 
         # TODO this should be deleted before posting
         self.transform_helper.fix_map_to_odom_transform(msg.pose.pose,
@@ -94,7 +102,11 @@ class ParticleFilterROS(object):
 
         best = None
         if scan is not None:
+            ps = self.pf_.particles
             ws = self.pm_.match(self.pf_.particles, scan)
+            #print('ws', ws)
+            #plt.scatter(ps[:,0], ps[:,1], label='resample', s=ws, alpha=1.0)
+            #plt.show()
             best = self.pf_.resample(ws)
 
         self.rb_.publish(self.pf_.particles, best)

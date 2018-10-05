@@ -43,29 +43,50 @@ class ParticleFilter(object):
             init_theta = seed[2]
 
         particle_field = []
+        
+        if seed:
+            x = np.random.normal(loc=init_x, scale=spread[0], size=size)
+            y = np.random.normal(loc=init_y, scale=spread[0], size=size)
+            #x, y = np.random.normal(loc=[[init_x],[init_y]], scale=spread, size=(2,size))
+            #x, y = np.random.normal(loc=[[init_x],[init_y]], scale=spread, size=(2,size))
+            h = np.random.normal(loc=init_theta, scale=spread[1], size=size)
+        else:
+            x, y = np.random.normal(scale=spread[0], size=(2,size))
+            h = np.random.uniform(-np.pi, np.pi, size=size)
 
-        for i in range(size):
-            # TODO : fix distributions, spread, etc.
+        h = U.anorm(h)
 
-            #generate random coordinate in polar, radius from the start.
-            ran_dist = random.uniform(0, spread[0])
-            if seed:
-                #If there is a seed, then it will tend to center via gaussian.  If not, complete random.
-                ran_dir = random.gauss(init_theta, spread[1])
-            else:
-                ran_dir = random.uniform(0, 2*np.pi)
-
-            #convert to cartesian.
-            ran_theta = random.uniform(0, 2*np.pi)
-            x = np.cos(ran_dir)*ran_dist + init_x
-            y = np.sin(ran_dir)*ran_dist + init_y
-
-            particle = [x,y,ran_theta]
-            particle_field.append(particle)
-
+        self.particles_ = np.stack([x,y,h], axis=-1)
         self.size_ = size
-        self.particles_= np.asarray(particle_field, dtype=np.float32)
-        print np.std(self.particles_, axis=0)
+
+        #for i in range(size):
+        #    # TODO : fix distributions, spread, etc.
+
+        #    if seed:
+        #        x, y = np.random.normal(loc=[init_x,init_y], scale=[spread[0],spread[0]], size=(2,size))
+        #        h = np.random.normal(loc=init_theta, scale=spread[1], size=size)
+        #    else:
+        #        x, y = np.random.normal(loc=[0,0], scale=spread[0], size=(size,2))
+        #        h = np.random.uniform(-np.pi, np.pi, size=size)
+
+        #    ##generate random coordinate in polar, radius from the start.
+        #    #ran_dist = random.uniform(0, spread[0])
+        #    #if seed:
+        #    #    #If there is a seed, then it will tend to center via gaussian.  If not, complete random.
+        #    #    ran_dir = random.gauss(init_theta, spread[1])
+        #    #else:
+        #    #    ran_dir = random.uniform(0, 2*np.pi)
+
+        #    ##convert to cartesian.
+        #    #ran_theta = random.uniform(0, 2*np.pi)
+        #    #x = np.cos(ran_dir)*ran_dist + init_x
+        #    #y = np.sin(ran_dir)*ran_dist + init_y
+
+        #    particle = [x,y,h]
+        #    particle_field.append(particle)
+
+        #self.size_ = size
+        #self.particles_= np.asarray(particle_field, dtype=np.float32)
 
     def update(self, odom):
         # assume odom = (v,w,dt)
@@ -94,6 +115,7 @@ class ParticleFilter(object):
         else:
             prob = weight
 
+        prob[np.isnan(prob)] = 0.0
         prob /= np.sum(prob)
 
         if viz:
@@ -112,11 +134,15 @@ class ParticleFilter(object):
         #particles = self.particles_[idx]
 
         # "perfect" resampler
+        print 'prob', np.min(prob), np.max(prob), np.std(prob)
         self.particles_, ws = resample(self.particles_, prob)
-        self.particles_ = np.random.normal(self.particles_, scale=noise)
+        self.particles_ += np.random.normal(0.0, scale=noise)
+        #self.particles_ = np.random.normal(self.particles_, scale=noise)
 
         # TODO : better "best" particle
-        return self.particles_[np.argmax(ws)]
+        return np.mean(self.particles_, axis=0)
+
+        #return self.particles_[np.argmax(ws)]
 
     @property
     def particles(self):

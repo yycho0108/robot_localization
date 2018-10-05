@@ -21,6 +21,7 @@ class TFHelper(object):
     def __init__(self):
         self.tf_listener = TransformListener()
         self.tf_broadcaster = TransformBroadcaster()
+        self.translation, self.rotation = [0,0,0], [0,0,0,1]
 
     @staticmethod
     def convert_translation_rotation_to_pose(translation, rotation):
