@@ -25,7 +25,7 @@ def resample(ps, ws, n=None):
 
             u0 = u0 + (scale - u0) * nform(n-i-1)
 
-        return ws2, ps2
+        return ps2, ws2
 
 def main():
     from matplotlib import pyplot as plt
@@ -33,7 +33,7 @@ def main():
     ws = np.random.uniform(size=n)
     ws = np.sort(ws, -1)
     ps = np.arange(n)
-    ws2, ps2 = resample(ps,ws)
+    ps2, ws2 = resample(ps,ws)
 
     ws_r = np.convolve(ws, [0.25,0.5,0.25], 'same')
     ws_r = ws_r/ws_r.sum()

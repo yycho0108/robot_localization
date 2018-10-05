@@ -56,7 +56,7 @@ class ParticleFilter(object):
             particle_field.append(particle)
 
         self.size_ = size
-        self.particles_= particle_field
+        self.particles_= np.asarray(particle_field, dtype=np.float32)
 
     def update(self, odom):
         # assume odom = (v,w,dt)
@@ -71,8 +71,8 @@ class ParticleFilter(object):
         self.particles_ += [[dx,dy,dh]]
         self.particles_[:,2] = U.anorm(self.particles_[:,2])
 
-    def resample(self, cost,
-            eps=1e-3, copy=False, viz=False):
+    def resample(self, cost, noise=(0.0,0.0,0.0),
+            eps=1e-3, viz=False):
         # cost -> probability
 
         if viz:
@@ -100,17 +100,33 @@ class ParticleFilter(object):
 
         # "perfect" resampler
         self.particles_, _ = resample(self.particles_, prob)
-        if copy:
-            return np.copy(self.particles_)
-        else:
-            return self.particles_
+        self.particles_ = np.random.normal(self.particles_, scale=noise)
+
+    @property
+    def particles(self):
+        return np.copy(self.particles_)
 
 def main():
     pf = ParticleFilter()
     pf.initialize(size=100)
-    #pf.particles_ = np.random.uniform(-10, 10, size=(100,2))
-    cost = np.random.uniform(0, 10, size=100)
-    pf.resample(cost)
+
+    # visualization
+    from matplotlib import pyplot as plt
+    ps0 = pf.particles
+    cost0 = np.linalg.norm(ps0[:,:2], axis=-1) # test: cost by distance from zero
+
+    pf.resample(cost0, noise=(0.1,0.1,0.1))
+    ps1 = pf.particles
+    cost1 = np.linalg.norm(ps1[:,:2], axis=-1) # test: cost by distance from zero
+
+    plt.scatter(ps1[:,0], ps1[:,1], label='resample', s=50.0*(1.0 / cost1), alpha=1.0)
+    plt.scatter(ps0[:,0], ps0[:,1], label='original', s=50.0*(1.0 / cost0), alpha=0.5)
+    plt.legend()
+    plt.show()
+
+    ##pf.particles_ = np.random.uniform(-10, 10, size=(100,2))
+    #cost = np.random.uniform(0, 10, size=100)
+    #pf.resample(cost)
 
 if __name__ == "__main__":
     main()
