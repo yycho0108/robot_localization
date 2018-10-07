@@ -11,7 +11,7 @@ class ParticleFilter(object):
         self.size_ = None
         self.particles_ = None
         self.weights_ = None
-        self.gamma_ = (1.0/8.0)
+        self.gamma_ = (1.0 / 8.0) # TODO : determine if gamma is useful
 
         # initialization parameters
         self.radius = 10 #the limit of how big the particle field is generated.
@@ -59,7 +59,13 @@ class ParticleFilter(object):
         h = U.anorm(h)
 
         self.particles_ = np.stack([x,y,h], axis=-1)
-        self.weights_ = np.full(size, 1.0/size)
+        if seed:
+            delta = self.particles_ - np.reshape(seed, [1,3])
+            cost = np.linalg.norm(delta, axis=-1)
+            self.weights_ = (1.0 / (cost + 1.0/size))
+            self.weights_ /= self.weights_.sum()
+        else:
+            self.weights_ = np.full(size, 1.0/size)
         self.size_ = size
 
         #for i in range(size):
@@ -149,17 +155,17 @@ class ParticleFilter(object):
         self.particles_, self.weights_ = resample(self.particles_, weight)
         self.weights_ /= self.weights_.sum()
 
-        #self.particles_ += np.random.normal(loc=0.0, scale=noise)
+        # apply noise (simple method to sample more variance in candidates)
         self.particles_ = np.random.normal(loc=self.particles_, scale=noise)
 
-        # TODO : better "best" particle
+        # "naive" best
+        #best_idx = np.argmax(self.weights_)
+        #return self.particles_[best_idx].copy()
+
+        # "weighted mean" best
         x, y = np.average(self.particles[:,:2], axis=0, weights=self.weights_)
-        #x, y = np.sum(self.particles_[:,:2] * self.weights_[:,nax], axis=0)
-        #x, y = x/self.size_, y/self.size_
         h = U.amean(self.particles[:,2], w=self.weights_)
         return [x,y,h]
-
-        #return self.particles_[np.argmax(ws)]
 
     @property
     def particles(self):

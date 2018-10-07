@@ -19,12 +19,15 @@ class ParticleMatcher(object):
         ps = particle_list
         dist = self.OF.get_closest_obstacle_distance(ps[:,0], ps[:,1])
         dist = np.asarray(dist, dtype=np.float32)
-        print('dist stats : min {} max {} std {}'.format(dist.min(),dist.max(),dist.std()))
+        #print('dist stats : min {} max {} std {}'.format(dist.min(),dist.max(),dist.std()))
 
         cost = np.abs(np.subtract(dist, min_dist))
         cost[np.isnan(cost)] = 0 # set nan cost to zero to prevent artifacts
-        #weight = cost.max() - cost + 0.01
-        weight = 1.0 / cost
+
+        weight = cost.max() - cost + 1e-3
+        #weight = 1.0 / cost
+        # TODO : determine inverse vs. linear cost performance comparison
+
         weight[np.isnan(dist)] = 0 # set nan weight to zero to make sure it doesn't get sampled
         #print('ws', weight)
         return weight

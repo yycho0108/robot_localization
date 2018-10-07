@@ -21,6 +21,8 @@ def main():
     of = OccupancyField()
     p = of.map.info.origin.position
     res = of.map.info.resolution
+    print 'o', of.map.info.origin.orientation
+
     ox, oy = -p.x/res, -p.y/res
 
     d = of.get_closest_obstacle_distance(3.7, -0.01)

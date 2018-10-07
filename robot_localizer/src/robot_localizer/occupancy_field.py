@@ -23,7 +23,7 @@ class OccupancyField(object):
         rospy.wait_for_service("static_map")
         static_map = rospy.ServiceProxy("static_map", GetMap)
         self.map = static_map().map
-        self.shape_ =  (self.map.info.width, self.map.info.height)
+        self.shape_ =  (self.map.info.height, self.map.info.width)
         self.map_ = np.reshape(self.map.data, self.shape_)
 
         # unroll useful metadata
@@ -47,20 +47,37 @@ class OccupancyField(object):
 
         ix = np.int32((x - self.ox_) / self.mres_)
         iy = np.int32((y - self.oy_) / self.mres_)
-        #print(ix, iy)
-        d = self.dist_[iy, ix] # WARN : must be indexed as (iy,ix)
-        
-        x_out = np.logical_or(ix<0, ix>=self.mw_)
-        y_out = np.logical_or(iy<0, iy>self.mh_)
-        xy_out = np.logical_or(x_out, y_out)
-        #print('valid : {}/{}'.format(d.size - np.sum(xy_out), d.size))
 
-        if np.isscalar(d):
-            if xy_out:
-                d = np.nan
+        if np.isscalar(x):
+            if ix<0 or ix>=self.mw_ or iy<0 or iy>self.mh_:
+                return np.nan
+            else:
+                return self.dist_[iy,ix]
         else:
+            x_out = np.logical_or(ix<0, ix>=self.mw_)
+            y_out = np.logical_or(iy<0, iy>=self.mh_)
+            xy_out = np.logical_or(x_out, y_out)
+            iy[xy_out] = 0
+            ix[xy_out] = 0
+            d = self.dist_[iy,ix]
             d[xy_out] = np.nan
-        return d
+            return d
+        #
+
+        ##print(ix, iy)
+        #d = self.dist_[iy, ix] # WARN : must be indexed as (iy,ix)
+        #
+        #x_out = np.logical_or(ix<0, ix>=self.mw_)
+        #y_out = np.logical_or(iy<0, iy>self.mh_)
+        #xy_out = np.logical_or(x_out, y_out)
+        ##print('valid : {}/{}'.format(d.size - np.sum(xy_out), d.size))
+
+        #if np.isscalar(d):
+        #    if xy_out:
+        #        d = np.nan
+        #else:
+        #    d[xy_out] = np.nan
+        #return d
 
         ##x_coord = \
         ##    int((x - self.ox_)/self.m)
