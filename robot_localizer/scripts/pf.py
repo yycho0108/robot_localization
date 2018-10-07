@@ -70,7 +70,7 @@ class ParticleFilterROS(object):
         self.pf_.initialize(
                 size = 1000,
                 seed = xy_theta,
-                spread = [0.2, 0.5]
+                spread = [0.4, 0.5]
                 )
 
         ps = self.pf_.particles
@@ -102,7 +102,7 @@ class ParticleFilterROS(object):
 
             # inverse frame computation
             dx,dy,dh = delta
-            c, s = np.cos(delta[2]), np.sin(delta[2])
+            c, s = np.cos(self.last_odom_[2]), np.sin(self.last_odom_[2])
             delta[0] =  c*dx + s*dy
             delta[1] = -s*dx + c*dy
             delta[2] = U.anorm(dh)
@@ -113,15 +113,22 @@ class ParticleFilterROS(object):
         best = None
         if scan is not None:
             ps = self.pf_.particles
-            if np.linalg.norm(self.delta_[:2]) > 0.3 or self.delta_[2] > np.deg2rad(30):
-                # moved 10cm or 10 deg
+            if np.linalg.norm(self.delta_[:2]) > 0.1 or self.delta_[2] > np.deg2rad(10):
+                # only update moved 10cm or 10 deg
+
+                # reset delta
+                self.delta_ *= 0
+
                 ws = self.pm_.match(self.pf_.particles, scan)
                 #print('ws', ws)
                 #plt.scatter(ps[:,0], ps[:,1], label='resample', s=ws, alpha=1.0)
-                #plt.show()
-                best = self.pf_.resample(ws, noise=[0.01,0.01,0.01])
 
-        self.rb_.publish(self.pf_.particles, best)
+                #plt.show()
+                best = self.pf_.resample(ws, noise=[0.05,0.05,0.01])
+
+        good_idx = np.argsort(self.pf_.weights_)[::-1]
+
+        self.rb_.publish(self.pf_.particles[good_idx[:500]], best)
 
         if best is not None:
             x,y,h = best

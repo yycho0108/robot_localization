@@ -15,13 +15,16 @@ class ParticleMatcher(object):
         #scan is a list of [angle, theta]
         min_dist = np.min(scan[:,1])
         #print('ps', particle_list)
-        dist = [self.OF.get_closest_obstacle_distance(p[0], p[1]) for p in particle_list]
+        #dist = [self.OF.get_closest_obstacle_distance(p[0], p[1]) for p in particle_list]
+        ps = particle_list
+        dist = self.OF.get_closest_obstacle_distance(ps[:,0], ps[:,1])
         dist = np.asarray(dist, dtype=np.float32)
+        print('dist stats : min {} max {} std {}'.format(dist.min(),dist.max(),dist.std()))
 
         cost = np.abs(np.subtract(dist, min_dist))
         cost[np.isnan(cost)] = 0 # set nan cost to zero to prevent artifacts
         #weight = cost.max() - cost + 0.01
-        weight = 1.0 / (cost + 1e-02)
+        weight = 1.0 / cost
         weight[np.isnan(dist)] = 0 # set nan weight to zero to make sure it doesn't get sampled
         #print('ws', weight)
         return weight
