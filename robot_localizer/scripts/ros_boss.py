@@ -140,7 +140,8 @@ class RosBoss(object):
         pose_msg = None
         if self.use_tf_:
             try:
-                pose_tf = self.tfl_.lookupTransform('base_link', 'odom', rospy.Time(0))
+                #pose_tf = self.tfl_.lookupTransform('base_link', 'odom', rospy.Time(0))
+                pose_tf = self.tfl_.lookupTransform('odom', 'base_link', rospy.Time(0))
             except tf.Exception as e:
                 rospy.loginfo_throttle(1.0, 'Failed TF Transform : {}'.format(e) )
                 return None

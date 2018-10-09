@@ -10,6 +10,8 @@ class ParticleFilter(object):
         # general parameters
         self.size_ = None
         self.particles_ = None
+        self.weights_ = None
+        self.gamma_ = (1.0 / 8.0) # TODO : determine if gamma is useful
 
         # initialization parameters
         self.radius = 10 #the limit of how big the particle field is generated.
@@ -43,29 +45,57 @@ class ParticleFilter(object):
             init_theta = seed[2]
 
         particle_field = []
+        
+        if seed:
+            x = np.random.normal(loc=init_x, scale=spread[0], size=size)
+            y = np.random.normal(loc=init_y, scale=spread[0], size=size)
+            #x, y = np.random.normal(loc=[[init_x],[init_y]], scale=spread, size=(2,size))
+            #x, y = np.random.normal(loc=[[init_x],[init_y]], scale=spread, size=(2,size))
+            h = np.random.normal(loc=init_theta, scale=spread[1], size=size)
+        else:
+            x, y = np.random.normal(scale=spread[0], size=(2,size))
+            h = np.random.uniform(-np.pi, np.pi, size=size)
 
-        for i in range(size):
-            # TODO : fix distributions, spread, etc.
+        h = U.anorm(h)
 
-            #generate random coordinate in polar, radius from the start.
-            ran_dist = random.uniform(0, spread[0])
-            if seed:
-                #If there is a seed, then it will tend to center via gaussian.  If not, complete random.
-                ran_dir = random.gauss(init_theta, spread[1])
-            else:
-                ran_dir = random.uniform(0, 2*np.pi)
-
-            #convert to cartesian.
-            ran_theta = random.uniform(0, 2*np.pi)
-            x = np.cos(ran_dir)*ran_dist + init_x
-            y = np.sin(ran_dir)*ran_dist + init_y
-
-            particle = [x,y,ran_theta]
-            particle_field.append(particle)
-
+        self.particles_ = np.stack([x,y,h], axis=-1)
+        if seed:
+            delta = self.particles_ - np.reshape(seed, [1,3])
+            cost = np.linalg.norm(delta, axis=-1)
+            self.weights_ = (1.0 / (cost + 1.0/size))
+            self.weights_ /= self.weights_.sum()
+        else:
+            self.weights_ = np.full(size, 1.0/size)
         self.size_ = size
-        self.particles_= np.asarray(particle_field, dtype=np.float32)
-        print np.std(self.particles_, axis=0)
+
+        #for i in range(size):
+        #    # TODO : fix distributions, spread, etc.
+
+        #    if seed:
+        #        x, y = np.random.normal(loc=[init_x,init_y], scale=[spread[0],spread[0]], size=(2,size))
+        #        h = np.random.normal(loc=init_theta, scale=spread[1], size=size)
+        #    else:
+        #        x, y = np.random.normal(loc=[0,0], scale=spread[0], size=(size,2))
+        #        h = np.random.uniform(-np.pi, np.pi, size=size)
+
+        #    ##generate random coordinate in polar, radius from the start.
+        #    #ran_dist = random.uniform(0, spread[0])
+        #    #if seed:
+        #    #    #If there is a seed, then it will tend to center via gaussian.  If not, complete random.
+        #    #    ran_dir = random.gauss(init_theta, spread[1])
+        #    #else:
+        #    #    ran_dir = random.uniform(0, 2*np.pi)
+
+        #    ##convert to cartesian.
+        #    #ran_theta = random.uniform(0, 2*np.pi)
+        #    #x = np.cos(ran_dir)*ran_dist + init_x
+        #    #y = np.sin(ran_dir)*ran_dist + init_y
+
+        #    particle = [x,y,h]
+        #    particle_field.append(particle)
+
+        #self.size_ = size
+        #self.particles_= np.asarray(particle_field, dtype=np.float32)
 
     def update(self, odom):
         # assume odom = (v,w,dt)
@@ -77,8 +107,14 @@ class ParticleFilter(object):
         #dy = v * np.sin(h) * dt
         #dh = w * dt
 
-        self.particles_ += [[dx,dy,dh]]
-        self.particles_[:,2] = U.anorm(self.particles_[:,2])
+        c_ = np.cos(self.particles_[:,2])
+        s_ = np.sin(self.particles_[:,2])
+
+        dx_ =  c_*dx - s_*dy
+        dy_ =  s_*dx + c_*dy
+
+        self.particles_[:,:2] += np.stack([dx_,dy_], axis=-1)
+        self.particles_[:,2] = U.anorm(self.particles_[:,2] + dh)
 
     def resample(self, weight, noise=(0.0,0.0,0.0),
             eps=1e-3, viz=False, inv=False):
@@ -90,11 +126,11 @@ class ParticleFilter(object):
             plt.title('weight')
 
         if inv:
-            prob = 1.0 / (np.add(weight, eps))
-        else:
-            prob = weight
+            weight = 1.0 / (np.add(weight, eps))
 
-        prob /= np.sum(prob)
+        # weight rectification
+        weight[np.isnan(weight)] = 0.0
+        weight /= np.sum(weight)
 
         if viz:
             plt.figure()
@@ -112,11 +148,24 @@ class ParticleFilter(object):
         #particles = self.particles_[idx]
 
         # "perfect" resampler
-        self.particles_, ws = resample(self.particles_, prob)
-        self.particles_ = np.random.normal(self.particles_, scale=noise)
+        print 'weight statistics', weight.min(), weight.max(), weight.std() #np.min(weight), np.max(weight), np.std(weight)
+        weight = (self.gamma_ * self.weights_) + (1.0 - self.gamma_) * weight
+        weight /= weight.sum()
 
-        # TODO : better "best" particle
-        return self.particles_[np.argmax(ws)]
+        self.particles_, self.weights_ = resample(self.particles_, weight)
+        self.weights_ /= self.weights_.sum()
+
+        # apply noise (simple method to sample more variance in candidates)
+        self.particles_ = np.random.normal(loc=self.particles_, scale=noise)
+
+        # "naive" best
+        #best_idx = np.argmax(self.weights_)
+        #return self.particles_[best_idx].copy()
+
+        # "weighted mean" best
+        x, y = np.average(self.particles[:,:2], axis=0, weights=self.weights_)
+        h = U.amean(self.particles[:,2], w=self.weights_)
+        return [x,y,h]
 
     @property
     def particles(self):
