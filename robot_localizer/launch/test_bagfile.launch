@@ -5,8 +5,13 @@
   <arg name="scan_topic" default="stable_scan"/>
   <arg name="map_name"/>
 
+  <arg name="rate" default="1.0"/>
+  <arg name="x0" default="0.0"/>
+  <arg name="y0" default="0.0"/>
+  <arg name="h0" default="0.0"/>
+
   <node name="map_server" pkg="map_server" type="map_server" args="$(find robot_localizer)/maps/$(arg map_name).yaml"/>
-  <node name="bag_player" pkg="rosbag" type="play" args="$(find robot_localizer)/bags/$(arg map_name).bag --clock --pause -r 1.0 -s 7.0" output="screen"/>
+  <node name="bag_player" pkg="rosbag" type="play" args="$(find robot_localizer)/bags/$(arg map_name).bag --clock --pause -r $(arg rate) -s 7.0" output="screen"/>
 
   <include file="$(find neato_node)/launch/set_urdf.launch"/>
 
@@ -22,6 +27,11 @@
  <group unless="$(arg use_builtin)">
   <node name="pf" pkg="robot_localizer" type="pf.py" output="screen">
     <remap from="scan" to="$(arg scan_topic)"/>
+
+    <param name="x0" value="$(arg x0)"/>
+    <param name="y0" value="$(arg y0)"/>
+    <param name="h0" value="$(arg h0)"/>
+
   </node>
 </group>
 </launch>

@@ -2,13 +2,12 @@
     your particle filter """
 
 from __future__ import print_function, division
-
-import rospy
-
-from nav_msgs.srv import GetMap
+import time
 import numpy as np
+import rospy
+import cv2
+from nav_msgs.srv import GetMap
 from sklearn.neighbors import NearestNeighbors
-
 
 class OccupancyField(object):
     """ Stores an occupancy field for an input map.  An occupancy field returns
@@ -24,70 +23,75 @@ class OccupancyField(object):
         rospy.wait_for_service("static_map")
         static_map = rospy.ServiceProxy("static_map", GetMap)
         self.map = static_map().map
+        self.shape_ =  (self.map.info.height, self.map.info.width)
+        self.map_ = np.reshape(self.map.data, self.shape_)
 
-        # The coordinates of each grid cell in the map
-        X = np.zeros((self.map.info.width*self.map.info.height, 2))
+        # unroll useful metadata
+        info = self.map.info
+        self.ox_ = info.origin.position.x
+        self.oy_ = info.origin.position.y
+        self.mres_ = info.resolution
+        self.mw_ = info.width
+        self.mh_ = info.height
 
-        # while we're at it let's count the number of occupied cells
-        total_occupied = 0
-        curr = 0
-        for i in range(self.map.info.width):
-            for j in range(self.map.info.height):
-                # occupancy grids are stored in row major order
-                ind = i + j*self.map.info.width
-                if self.map.data[ind] > 0:
-                    total_occupied += 1
-                X[curr, 0] = float(i)
-                X[curr, 1] = float(j)
-                curr += 1
+        obs = (self.map_ > 0) | (self.map_ < 0) # treat -1 as obstacle
+        obs = np.logical_not(obs).astype(np.uint8) # now zero is an obstacle (format for cv2)
 
-        # The coordinates of each occupied grid cell in the map
-        occupied = np.zeros((total_occupied, 2))
-        curr = 0
-        for i in range(self.map.info.width):
-            for j in range(self.map.info.height):
-                # occupancy grids are stored in row major order
-                ind = i + j*self.map.info.width
-                if self.map.data[ind] > 0:
-                    occupied[curr, 0] = float(i)
-                    occupied[curr, 1] = float(j)
-                    curr += 1
-
-        # use super fast scikit learn nearest neighbor algorithm
-        nbrs = NearestNeighbors(n_neighbors=1,
-                                algorithm="ball_tree").fit(occupied)
-        distances, indices = nbrs.kneighbors(X)
-
-        self.closest_occ = {}
-        curr = 0
-        for i in range(self.map.info.width):
-            for j in range(self.map.info.height):
-                ind = i + j*self.map.info.width
-                self.closest_occ[ind] = \
-                    distances[curr][0]*self.map.info.resolution
-                curr += 1
+        self.dist_ = cv2.distanceTransform(obs, cv2.DIST_L2, 3)
+        self.dist_ *= self.mres_
 
     def get_closest_obstacle_distance(self, x, y):
         """ Compute the closest obstacle to the specified (x,y) coordinate in
             the map.  If the (x,y) coordinate is out of the map boundaries, nan
             will be returned. """
 
-        #print('what?')
-        #print(self.map.info.origin.position)
-        #print(self.map.info.resolution)
+        ix = np.int32((x - self.ox_) / self.mres_)
+        iy = np.int32((y - self.oy_) / self.mres_)
 
-        x_coord = \
-            int((x - self.map.info.origin.position.x)/self.map.info.resolution)
-        y_coord = \
-            int((y - self.map.info.origin.position.y)/self.map.info.resolution)
+        if np.isscalar(x):
+            if ix<0 or ix>=self.mw_ or iy<0 or iy>self.mh_:
+                return np.nan
+            else:
+                return self.dist_[iy,ix]
+        else:
+            x_out = np.logical_or(ix<0, ix>=self.mw_)
+            y_out = np.logical_or(iy<0, iy>=self.mh_)
+            xy_out = np.logical_or(x_out, y_out)
+            iy[xy_out] = 0
+            ix[xy_out] = 0
+            d = self.dist_[iy,ix]
+            d[xy_out] = np.nan
+            return d
+        #
 
-        # check if we are in bounds
-        if x_coord > self.map.info.width or x_coord < 0:
-            return float('nan')
-        if y_coord > self.map.info.height or y_coord < 0:
-            return float('nan')
+        ##print(ix, iy)
+        #d = self.dist_[iy, ix] # WARN : must be indexed as (iy,ix)
+        #
+        #x_out = np.logical_or(ix<0, ix>=self.mw_)
+        #y_out = np.logical_or(iy<0, iy>self.mh_)
+        #xy_out = np.logical_or(x_out, y_out)
+        ##print('valid : {}/{}'.format(d.size - np.sum(xy_out), d.size))
 
-        ind = x_coord + y_coord*self.map.info.width
-        if ind >= self.map.info.width*self.map.info.height or ind < 0:
-            return float('nan')
-        return self.closest_occ[ind]
+        #if np.isscalar(d):
+        #    if xy_out:
+        #        d = np.nan
+        #else:
+        #    d[xy_out] = np.nan
+        #return d
+
+        ##x_coord = \
+        ##    int((x - self.ox_)/self.m)
+        ##y_coord = \
+        ##    int((y - self.oy_)/self.map.info.resolution)
+
+        ## check if we are in bounds
+        #if x_coord > self.map.info.width or x_coord < 0:
+        #    return float('nan')
+        #if y_coord > self.map.info.height or y_coord < 0:
+        #    return float('nan')
+
+        #ind = x_coord + y_coord*self.map.info.width
+        #if ind >= self.map.info.width*self.map.info.height or ind < 0:
+        #    return float('nan')
+
+        #return self.dist_[x_coord, y_coord]
