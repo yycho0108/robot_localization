@@ -11,7 +11,7 @@
   <arg name="h0" default="0.0"/>
 
   <node name="map_server" pkg="map_server" type="map_server" args="$(find robot_localizer)/maps/$(arg map_name).yaml"/>
-  <node name="bag_player" pkg="rosbag" type="play" args="$(find robot_localizer)/bags/$(arg map_name).bag --clock --pause -r $(arg rate) -s 7.0" output="screen"/>
+  <node name="bag_player" pkg="rosbag" type="play" args="$(find robot_localizer)/bags/$(arg map_name).bag --clock --pause -r $(arg rate)" output="screen"/>
 
 
   <include file="$(find neato_node)/launch/set_urdf.launch"/>

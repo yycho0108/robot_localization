@@ -33,7 +33,8 @@ def main():
     m = of.map_
     v = of.dist_
 
-    fig, (ax0,ax1) = plt.subplots(1,2)
+    # fig, (ax0,ax1) = plt.subplots(1,2)
+    fig, (ax0) = plt.subplots(1,1)
     p = ax0.imshow(v, origin='lower')
     ax0.scatter([ox],[oy])
     ax0.scatter([px],[py])
@@ -44,9 +45,9 @@ def main():
     cax = divider.append_axes('right', size='5%', pad=0.05)
     fig.colorbar(p, cax=cax)
 
-    ax1.imshow(m, origin='lower')
-    ax1.scatter([ox],[oy])
-    ax1.scatter([px],[py])
+    # ax1.imshow(m, origin='lower')
+    # ax1.scatter([ox],[oy])
+    # ax1.scatter([px],[py])
     plt.show()
 
 if __name__ == "__main__":

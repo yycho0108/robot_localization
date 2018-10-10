@@ -64,7 +64,7 @@ class ParticleFilterROS(object):
             by another ROS Node or could come from the rviz GUI """
         xy_theta = \
             self.transform_helper.convert_pose_to_xy_and_theta(msg.pose.pose)
-        
+
         print('what the fuck?', xy_theta)
 
         self.pf_.initialize(
@@ -124,7 +124,8 @@ class ParticleFilterROS(object):
                 #plt.scatter(ps[:,0], ps[:,1], label='resample', s=ws, alpha=1.0)
 
                 #plt.show()
-                best = self.pf_.resample(ws, noise=[0.05,0.05,0.01])
+                if ws is not None:
+                    best = self.pf_.resample(ws, noise=[0.05,0.05,0.01])
 
         good_idx = np.argsort(self.pf_.weights_)[::-1]
 

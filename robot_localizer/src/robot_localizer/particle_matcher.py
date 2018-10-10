@@ -11,7 +11,9 @@ class ParticleMatcher(object):
         self.OF = OccupancyField()
 
 
-    def match(self, particle_list, scan):
+    def match(self, particle_list, scan, min_num=5):
+        if(len(scan) <= min_num):
+            return None
         #scan is a list of [angle, theta]
         min_dist = np.min(scan[:,1])
         #print('ps', particle_list)
