@@ -2,7 +2,6 @@
 import numpy as np
 import utils as U
 from resample import resample
-from matplotlib import pyplot as plt
 import random
 
 class ParticleFilter(object):
@@ -11,7 +10,7 @@ class ParticleFilter(object):
         self.size_ = None
         self.particles_ = None
         self.weights_ = None
-        self.gamma_ = (1.0 / 8.0) # TODO : determine if gamma is useful
+        self.gamma_ = (4.0 / 8.0) # TODO : determine if gamma is useful
 
         # initialization parameters
         self.radius = 10 #the limit of how big the particle field is generated.
@@ -117,43 +116,25 @@ class ParticleFilter(object):
         self.particles_[:,2] = U.anorm(self.particles_[:,2] + dh)
 
     def resample(self, weight, noise=(0.0,0.0,0.0),
-            eps=1e-3, viz=False, inv=False):
+            eps=1e-3, inv=False):
         # cost -> probability
 
-        if viz:
-            plt.figure()
-            plt.bar(range(self.size_), weight)
-            plt.title('weight')
 
         if inv:
             weight = 1.0 / (np.add(weight, eps))
 
         # weight rectification
         weight[np.isnan(weight)] = 0.0
-        weight /= np.sum(weight)
-
-        if viz:
-            plt.figure()
-            plt.bar(range(self.size_), prob)
-            plt.title('probability')
 
         # naive choice
         #idx = np.random.choice(self.size_, size=self.size_, p=prob)
-        #if viz:
-        #    plt.figure()
-        #    plt.bar(range(self.size_), np.bincount(idx, minlength=self.size_))
-        #    plt.title('selection')
-        #if viz:
-        #    plt.show()
         #particles = self.particles_[idx]
 
         # "perfect" resampler
         print 'weight statistics', weight.min(), weight.max(), weight.std() #np.min(weight), np.max(weight), np.std(weight)
         weight = (self.gamma_ * self.weights_) + (1.0 - self.gamma_) * weight
-        weight /= weight.sum()
 
         self.particles_, self.weights_ = resample(self.particles_, weight)
-        self.weights_ /= self.weights_.sum()
 
         # apply noise (simple method to sample more variance in candidates)
         self.particles_ = np.random.normal(loc=self.particles_, scale=noise)
@@ -173,21 +154,54 @@ class ParticleFilter(object):
         #return np.copy(self.particles_)
 
 def main():
+    n = 1000
     pf = ParticleFilter()
-    pf.initialize(size=100)
+    pf.initialize(size=n)
 
     # visualization
     from matplotlib import pyplot as plt
     ps0 = pf.particles
-    cost0 = np.linalg.norm(ps0[:,:2], axis=-1) # test: cost by distance from zero
 
-    pf.resample(cost0, noise=(0.1,0.1,0.1), inv=True)
+    cost0 = np.linalg.norm(ps0[:,:2], axis=-1) # test: cost by distance from zero
+    kp, kx = 0.5, 1.0 # configure as p=50% match at 1.0m distance
+    k = (- np.log(kp) / kx)
+    p0 = np.exp(-k*cost0)
+    p0 = U.renorm(p0, 0.2, 0.7)
+
+    S = np.reshape
+    nax = np.newaxis
+
+    c0 = np.full((n, 3), [1.0,0.0,0.0])
+    col0 = np.concatenate([c0, p0[:,nax]], axis=-1)
+
+    pf.resample(p0, noise=(0.5,0.5,0.5))
     ps1 = pf.particles
     cost1 = np.linalg.norm(ps1[:,:2], axis=-1) # test: cost by distance from zero
+    p1 = np.exp(-k*cost1)
+    p1 = U.renorm(p1, 0.2, 0.7)
 
-    plt.scatter(ps1[:,0], ps1[:,1], label='resample', s=5.0*(cost0.max() / cost1), alpha=1.0)
-    plt.scatter(ps0[:,0], ps0[:,1], label='original', s=5.0*(cost1.max() / cost0), alpha=0.5)
-    plt.legend()
+    c1 = np.full((n, 3), [0.0,1.0,0.0])
+    col1 = np.concatenate([c1, p1[:,nax]], axis=-1)
+
+    sc0 = 20.0 * p0
+    sc1 = 20.0 * p1
+
+    plt.scatter(ps0[:,0], ps0[:,1], label='original', c=col0, s=sc0)
+    plt.scatter(ps1[:,0], ps1[:,1], label='resample', c=col1, s=sc1)
+
+    plt.xlim(-10.0, 10.0)
+    plt.ylim(-10.0, 10.0)
+
+    plt.legend(loc=1)
+    ax = plt.gca()
+    ax.set_axisbelow(True)
+    plt.grid()
+
+    leg = ax.get_legend()
+    hl_dict = {handle.get_label(): handle for handle in leg.legendHandles}
+    hl_dict['original'].set_color([1.0,0.0,0.0])
+    hl_dict['resample'].set_color([0.0,1.0,0.0])
+    plt.title('Resample (single step snapshot)')
     plt.show()
 
     ##pf.particles_ = np.random.uniform(-10, 10, size=(100,2))

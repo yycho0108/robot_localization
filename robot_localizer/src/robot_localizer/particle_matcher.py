@@ -10,6 +10,13 @@ class ParticleMatcher(object):
         #self.map_ = map_
         self.OF = OccupancyField()
 
+    def d2p(self, d,  eps=1e-3):
+        # return d.max() - d + eps # linear-mode
+        # return (1.0 / (d + eps)) # inverse-mode
+
+        kp, kx = 0.5, 1.0 # configure as p=50% match at 1.0m distance
+        k = (- np.log(kp) / kx)
+        return np.exp(-k*d)
 
     def match(self, particle_list, scan, min_num=5):
         if(len(scan) <= min_num):
@@ -21,16 +28,20 @@ class ParticleMatcher(object):
         ps = particle_list
         dist = self.OF.get_closest_obstacle_distance(ps[:,0], ps[:,1])
         dist = np.asarray(dist, dtype=np.float32)
+        dist[np.isnan(dist)] = np.inf # WARNING : setting to np.inf doesn't work for linear-mode d2p.
+        cost = np.abs( np.subtract(dist, min_dist))
+
         #print('dist stats : min {} max {} std {}'.format(dist.min(),dist.max(),dist.std()))
+        #cost = np.abs(np.subtract(dist, min_dist))
+        #cost[np.isnan(cost)] = 0 # set nan cost to zero to prevent artifacts
+        #weight = cost.max() - cost + 1e-3
 
-        cost = np.abs(np.subtract(dist, min_dist))
-        cost[np.isnan(cost)] = 0 # set nan cost to zero to prevent artifacts
+        weight = self.d2p(cost)
 
-        weight = cost.max() - cost + 1e-3
         #weight = 1.0 / cost
         # TODO : determine inverse vs. linear cost performance comparison
 
-        weight[np.isnan(dist)] = 0 # set nan weight to zero to make sure it doesn't get sampled
+        #weight[np.isnan(dist)] = 0 # set nan weight to zero to make sure it doesn't get sampled
         #print('ws', weight)
         return weight
 

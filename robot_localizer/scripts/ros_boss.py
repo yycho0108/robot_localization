@@ -4,8 +4,10 @@ import tf
 import numpy as np
 
 from nav_msgs.msg import Odometry
+from std_msgs.msg import ColorRGBA, Header
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Pose, PoseStamped, PoseArray
+from geometry_msgs.msg import Pose, PoseStamped, PoseArray, Vector3
+from visualization_msgs.msg import Marker, MarkerArray
 from robot_localizer.tf_helper import TFHelper
 import message_filters
 
@@ -43,9 +45,11 @@ class RosBoss(object):
         self.odom_ = None
         self.part_msg_ = PoseArray()
         self.best_msg_ = PoseStamped()
+        self.mark_msg_ = MarkerArray()
 
         # ROS Handles
         self.part_pub_ = None
+        self.mark_pub_ = None
         self.best_pub_ = None
         self.scan_sub_ = None
         self.odom_sub_ = None
@@ -72,6 +76,7 @@ class RosBoss(object):
     def start(self):
         """ register ROS handles and subscribe to all incoming topics """
         self.part_pub_ = rospy.Publisher('particles', PoseArray, queue_size=5)
+        self.mark_pub_ = rospy.Publisher('particles_mk', MarkerArray, queue_size=5)
         self.best_pub_ = rospy.Publisher('best_particle', PoseStamped, queue_size=5)
         if self.sync_:
             scan_sub = message_filters.Subscriber('scan', LaserScan)
@@ -101,7 +106,9 @@ class RosBoss(object):
         msg = self.tfh_.convert_translation_rotation_to_pose(txn,rxn)
         return msg
 
-    def publish(self, particles, best_particle=None):
+    def publish(self, particles, best_particle=None,
+            weights=None
+            ):
         """Publish particles pose / visualization
 
         Args:
@@ -115,15 +122,42 @@ class RosBoss(object):
         self.part_msg_.header.seq += 1
         self.part_msg_.header.stamp = rospy.Time.now()
 
+
         if best_particle is not None:
             self.best_msg_.header.frame_id = 'map'
             self.best_msg_.header.seq += 1
             self.best_msg_.header.stamp = rospy.Time.now()
 
+        if weights is not None:
+            weights = (0.1 / weights.max()) * weights
+
+
         # populate poses
         print 'length of particle : ', len(particles)
         self.part_msg_.poses = [self.particle_to_pose(p) for p in particles]
         self.part_pub_.publish(self.part_msg_)
+
+        # poses v2
+        self.mark_msg_.markers=[]
+        n = len(particles)
+        for i in range(n):
+            mk = Marker(header=Header(stamp=rospy.Time.now(), frame_id='map'))
+            mk.ns = 'pcloud'
+            mk.id = i
+            mk.type=mk.ARROW
+            mk.action=mk.ADD
+            mk.pose=self.part_msg_.poses[i]
+            if weights is not None:
+                s = weights[i]
+                mk.scale = Vector3(s*2,s/3.,s/3.)
+                mk.color = ColorRGBA(1.0,0.0,1.0,s)
+            else:
+                mk.scale = Vector3(0.1,0.02,0.02)
+                mk.color = ColorRGBA(1.0,0.0,1.0,1.0)
+            mk.lifetime = rospy.Duration(1.0) # stay alive for 1 sec
+
+            self.mark_msg_.markers.append(mk)
+        self.mark_pub_.publish(self.mark_msg_)
 
         if best_particle is not None:
             self.best_msg_.pose = self.particle_to_pose(best_particle)

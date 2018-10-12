@@ -13,3 +13,10 @@ def amean(x, w=None):
         return np.arctan2((s*w).sum(), (c*w).sum())
     else:
         return np.arctan2(np.sin(x).sum(),np.cos(x).sum())
+
+def renorm(x, mn, mx):
+    xmn = np.min(x)
+    xmx = np.max(x)
+    return (x - xmn) / (xmx - xmn) * (mx - mn) + mn
+
+

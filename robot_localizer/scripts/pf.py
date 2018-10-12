@@ -65,8 +65,6 @@ class ParticleFilterROS(object):
         xy_theta = \
             self.transform_helper.convert_pose_to_xy_and_theta(msg.pose.pose)
 
-        print('what the fuck?', xy_theta)
-
         self.pf_.initialize(
                 size = 1000,
                 seed = xy_theta,
@@ -129,7 +127,11 @@ class ParticleFilterROS(object):
 
         good_idx = np.argsort(self.pf_.weights_)[::-1]
 
-        self.rb_.publish(self.pf_.particles[good_idx[:500]], best)
+        self.rb_.publish(
+                self.pf_.particles[good_idx[:500]],
+                best_particle=best,
+                weights=self.pf_.weights_[good_idx[:500]],
+                )
 
         if best is not None:
             x,y,h = best

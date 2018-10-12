@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /GroundTruth1
       Splitter Ratio: 0.5
     Tree Height: 747
   - Class: rviz/Selection
@@ -166,27 +167,12 @@ Visualization Manager:
       Use Timestamp: false
       Value: true
     - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.100000001
-      Class: rviz/Pose
-      Color: 255; 25; 0
-      Enabled: true
-      Head Length: 0.300000012
-      Head Radius: 0.100000001
-      Name: BestParticle
-      Shaft Length: 1
-      Shaft Radius: 0.0500000007
-      Shape: Arrow
-      Topic: /best_particle
-      Unreliable: false
-      Value: true
-    - Alpha: 1
       Arrow Length: 0.200000003
       Axes Length: 0.300000012
       Axes Radius: 0.00999999978
       Class: rviz/PoseArray
       Color: 39; 198; 255
-      Enabled: true
+      Enabled: false
       Head Length: 0.0700000003
       Head Radius: 0.0299999993
       Name: ParticleCloud
@@ -195,6 +181,14 @@ Visualization Manager:
       Shape: Arrow (Flat)
       Topic: /particles
       Unreliable: false
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /particles_mk
+      Name: ParticleCloudMk
+      Namespaces:
+        pcloud: true
+      Queue Size: 100
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -225,6 +219,36 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.100000001
+      Class: rviz/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.300000012
+      Head Radius: 0.100000001
+      Name: BestParticle
+      Shaft Length: 1
+      Shaft Radius: 0.0500000007
+      Shape: Arrow
+      Topic: /best_particle
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.100000001
+      Class: rviz/Pose
+      Color: 199; 255; 15
+      Enabled: true
+      Head Length: 0.300000012
+      Head Radius: 0.100000001
+      Name: GroundTruth
+      Shaft Length: 1
+      Shaft Radius: 0.0500000007
+      Shape: Arrow
+      Topic: /map_pose
+      Unreliable: false
       Value: true
   Enabled: true
   Global Options:
@@ -260,11 +284,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Scale: 121.671448
+      Scale: 110.704193
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: 2.63825321
-      Y: 1.52870798
+      X: 2.97379112
+      Y: 1.47367823
     Saved: ~
 Window Geometry:
   Displays:
