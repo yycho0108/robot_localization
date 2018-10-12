@@ -6,14 +6,9 @@ Yoonyoung Cho, Maximilian Wei
 
 In this project, we implement a particle filter for robot localization with online lidar data and a static pre-built map. During the testing phase, we used the four supplied bags taken around AC109 for preliminary validation of the implementation; for the final iteration, we took the robot and generated the map ourselves, and localized it against the custom-made map.
 
-<table>
-  <tr>
-    <td> ![run](figs/run.gif) </td>
-  </tr>
-  <tr>
-    <td>Fig.1. Sample run of our particle filter implementation from bag data recorded around AC109.</td>
-  </tr>
-</table>
+|![run](figs/run.gif)|
+|:-:|
+|Fig.1. Sample run of our particle filter implementation from bag data recorded around AC109.|
 
 
 ## Problem Solving, Code Structure, Code Implementation
