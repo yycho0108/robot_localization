@@ -132,7 +132,7 @@ class RosBoss(object):
             weights = (0.1 / weights.max()) * weights
 
         # populate poses
-        print 'length of particle : ', len(particles)
+        #print 'length of particle : ', len(particles)
         self.part_msg_.poses = [self.particle_to_pose(p) for p in particles]
         self.part_pub_.publish(self.part_msg_)
 

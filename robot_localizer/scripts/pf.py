@@ -4,7 +4,7 @@
 
 from __future__ import print_function, division
 import rospy
-from geometry_msgs.msg import PoseWithCovarianceStamped, PoseArray, Pose
+from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, PoseArray, Pose
 from robot_localizer.tf_helper import TFHelper
 from tf import transformations as tx
 
@@ -36,6 +36,10 @@ class ParticleFilterROS(object):
                          PoseWithCovarianceStamped,
                          self.update_initial_pose)
 
+        self.err_ = []
+        self.gt_sub = rospy.Subscriber('/map_pose', PoseStamped,
+                self.gt_pose_cb)
+
         self.reset_srv = rospy.Service('reset', Empty, self.reset_cb)
 
         # publisher for the particle cloud for visualizing in rviz.
@@ -49,6 +53,17 @@ class ParticleFilterROS(object):
         self.transform_helper = TFHelper()
         self.last_odom_ = None
         self.delta_ = np.zeros(shape=3)
+
+    def gt_pose_cb(self, msg):
+        if self.pf_.best is not None:
+            now = rospy.Time.now()
+            p0 = self.pf_.best
+            p1 = self.transform_helper.convert_pose_to_xy_and_theta(msg.pose)
+
+            t = now.to_sec()
+            dx,dy,dh = np.subtract(p1, p0)
+            dh = U.anorm(dh)
+            self.err_.append([t,dx,dy,dh])
 
     def reset_cb(self, _):
         self.pf_.initialize(
@@ -142,6 +157,9 @@ class ParticleFilterROS(object):
 
     def run(self):
         r = rospy.Rate(5)
+        def save():
+            np.save('/tmp/err.npy', self.err_)
+        rospy.on_shutdown(save)
         while not(rospy.is_shutdown()):
             self.step()
             r.sleep()

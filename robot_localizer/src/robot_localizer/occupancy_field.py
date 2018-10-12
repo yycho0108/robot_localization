@@ -23,8 +23,10 @@ class OccupancyField(object):
         rospy.wait_for_service("static_map")
         static_map = rospy.ServiceProxy("static_map", GetMap)
         self.map = static_map().map
+        t0 = time.time()
         self.shape_ =  (self.map.info.height, self.map.info.width)
         self.map_ = np.reshape(self.map.data, self.shape_)
+
 
         # unroll useful metadata
         info = self.map.info
@@ -39,6 +41,8 @@ class OccupancyField(object):
 
         self.dist_ = cv2.distanceTransform(obs, cv2.DIST_L2, 3)
         self.dist_ *= self.mres_
+        t1 = time.time()
+        print('Took {} sec'.format(t1-t0))
 
     def get_closest_obstacle_distance(self, x, y):
         """ Compute the closest obstacle to the specified (x,y) coordinate in

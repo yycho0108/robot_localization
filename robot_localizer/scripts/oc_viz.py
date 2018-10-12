@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import rospy
 from robot_localizer.occupancy_field import OccupancyField
+from occupancy_field import OccupancyField as OF2
 import numpy as np
 from matplotlib import pyplot as plt
 import time
@@ -18,10 +19,12 @@ def main():
     #ax0.imshow(v)
     #ax1.imshow(np.reshape(of.map.data, shape).astype(np.float32))
 
-    of = OccupancyField()
+    of2 = OF2()
     p = of.map.info.origin.position
     res = of.map.info.resolution
     print 'o', of.map.info.origin.orientation
+    print of.map_.shape
+    print('npx', of.map_.size)
 
     ox, oy = -p.x/res, -p.y/res
 

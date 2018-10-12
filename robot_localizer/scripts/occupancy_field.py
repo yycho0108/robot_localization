@@ -8,7 +8,7 @@ import rospy
 from nav_msgs.srv import GetMap
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-
+import time
 
 class OccupancyField(object):
     """ Stores an occupancy field for an input map.  An occupancy field returns
@@ -24,6 +24,8 @@ class OccupancyField(object):
         rospy.wait_for_service("static_map")
         static_map = rospy.ServiceProxy("static_map", GetMap)
         self.map = static_map().map
+
+        t0 = time.time()
 
         # The coordinates of each grid cell in the map
         X = np.zeros((self.map.info.width*self.map.info.height, 2))
@@ -66,6 +68,9 @@ class OccupancyField(object):
                 self.closest_occ[ind] = \
                     distances[curr][0]*self.map.info.resolution
                 curr += 1
+
+        t1 = time.time()
+        print('Took {} seconds'.format(t1-t0))
 
     def get_closest_obstacle_distance(self, x, y):
         """ Compute the closest obstacle to the specified (x,y) coordinate in

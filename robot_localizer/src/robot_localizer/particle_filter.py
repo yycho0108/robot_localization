@@ -145,7 +145,7 @@ class ParticleFilter(object):
         #particles = self.particles_[idx]
 
         # "perfect" resampler
-        print 'weight statistics', weight.min(), weight.max(), weight.std() #np.min(weight), np.max(weight), np.std(weight)
+        #print 'weight statistics', weight.min(), weight.max(), weight.std() #np.min(weight), np.max(weight), np.std(weight)
         weight = (self.gamma_ * self.weights_) + (1.0 - self.gamma_) * weight
 
         self.particles_, self.weights_ = resample(self.particles_, weight)
@@ -172,7 +172,7 @@ class ParticleFilter(object):
 
     @property
     def best(self):
-        if self.recalc_:
+        if self.recalc_ and self.particles_ is not None:
             x, y = np.average(self.particles[:,:2], axis=0, weights=self.weights_)
             h = U.amean(self.particles[:,2], w=self.weights_)
             self.best_ = np.asarray([x,y,h])
