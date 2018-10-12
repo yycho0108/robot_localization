@@ -8,7 +8,7 @@ In this project, we implement a particle filter for robot localization with onli
 
 <table>
   <tr>
-    <td></td>
+    <td> ![run](figs/run.gif) </td>
   </tr>
   <tr>
     <td>Fig.1. Sample run of our particle filter implementation from bag data recorded around AC109.</td>
@@ -96,7 +96,7 @@ The current implementation does not perform detailed analysis on the *health* an
 
 ## Lessons Learned
 
-	Splitting up code into multiple files allowed for easier team development and greater modularity.  Combined with the branching system, it was much easier to separate files by general function.  However, on occasion the dependencies did make tracing errors slightly more difficult, but these were generally resolvable in a timely fashion.  
+Splitting up code into multiple files allowed for easier team development and greater modularity.  Combined with the branching system, it was much easier to separate files by general function.  However, on occasion the dependencies did make tracing errors slightly more difficult, but these were generally resolvable in a timely fashion.  
 
-	We also practiced more professional development practices by checking out individual branches for each major feature, and also creating pull requests.  This allowed us to better check over the code and have an idea of what the other person did through visualizing the changes, as opposed to having to manually check out the changes by going through version history.  The knowledge of the changes is a lot more insightful and helpful towards future development.  
+We also practiced more professional development practices by checking out individual branches for each major feature, and also creating pull requests.  This allowed us to better check over the code and have an idea of what the other person did through visualizing the changes, as opposed to having to manually check out the changes by going through version history.  The knowledge of the changes is a lot more insightful and helpful towards future development.  
 
