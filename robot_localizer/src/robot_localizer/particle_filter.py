@@ -11,10 +11,13 @@ class ParticleFilter(object):
         self.particles_ = None
         self.weights_ = None
         self.gamma_ = (4.0 / 8.0) # TODO : determine if gamma is useful
+        self.best_ = None
 
         # initialization parameters
         self.radius = 10 #the limit of how big the particle field is generated.
         self.spread = .5 #radius, theta_std
+
+        self.recalc_ = True
 
     def initialize(self, size, seed=None, spread=[10.0,0.5]): #seed = initial pose.
         """ Initializes particles.
@@ -61,11 +64,13 @@ class ParticleFilter(object):
         if seed:
             delta = self.particles_ - np.reshape(seed, [1,3])
             cost = np.linalg.norm(delta, axis=-1)
-            self.weights_ = (1.0 / (cost + 1.0/size))
-            self.weights_ /= self.weights_.sum()
+            self.weights_ = np.full(size, 1.0/size)
+            #self.weights_ = (1.0 / (cost + 1.0/size))
+            #self.weights_ /= self.weights_.sum()
         else:
             self.weights_ = np.full(size, 1.0/size)
         self.size_ = size
+        self.recalc_ = True
 
         #for i in range(size):
         #    # TODO : fix distributions, spread, etc.
@@ -115,11 +120,20 @@ class ParticleFilter(object):
         self.particles_[:,:2] += np.stack([dx_,dy_], axis=-1)
         self.particles_[:,2] = U.anorm(self.particles_[:,2] + dh)
 
+        if self.best_ is None:
+            self.recalc_ = True
+        else:
+            # apply transform
+            x,y,h = self.best_
+            bc, bs = np.cos(h), np.sin(h)
+            x += bc*dx - bs*dy
+            y += bs*dx + bc*dy
+            h = U.anorm(h+dh)
+            self.best_ = np.asarray([x,y,h])
+
     def resample(self, weight, noise=(0.0,0.0,0.0),
             eps=1e-3, inv=False):
         # cost -> probability
-
-
         if inv:
             weight = 1.0 / (np.add(weight, eps))
 
@@ -139,19 +153,32 @@ class ParticleFilter(object):
         # apply noise (simple method to sample more variance in candidates)
         self.particles_ = np.random.normal(loc=self.particles_, scale=noise)
 
+        self.recalc_ = True # need to recompute best particle
+
         # "naive" best
         #best_idx = np.argmax(self.weights_)
         #return self.particles_[best_idx].copy()
 
         # "weighted mean" best
-        x, y = np.average(self.particles[:,:2], axis=0, weights=self.weights_)
-        h = U.amean(self.particles[:,2], w=self.weights_)
-        return [x,y,h]
+        return self.best
+        #x, y = np.average(self.particles[:,:2], axis=0, weights=self.weights_)
+        #h = U.amean(self.particles[:,2], w=self.weights_)
+        #return [x,y,h]
 
     @property
     def particles(self):
         return self.particles_
         #return np.copy(self.particles_)
+
+    @property
+    def best(self):
+        if self.recalc_:
+            x, y = np.average(self.particles[:,:2], axis=0, weights=self.weights_)
+            h = U.amean(self.particles[:,2], w=self.weights_)
+            self.best_ = np.asarray([x,y,h])
+            self.recalc_ = False
+        else:
+            return self.best_
 
 def main():
     n = 1000

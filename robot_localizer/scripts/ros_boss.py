@@ -131,7 +131,6 @@ class RosBoss(object):
         if weights is not None:
             weights = (0.1 / weights.max()) * weights
 
-
         # populate poses
         print 'length of particle : ', len(particles)
         self.part_msg_.poses = [self.particle_to_pose(p) for p in particles]

@@ -71,11 +71,6 @@ class ParticleFilterROS(object):
                 spread = [0.4, 0.5]
                 )
 
-        ps = self.pf_.particles
-
-        #plt.scatter(ps[:,0], ps[:,1])
-        #plt.show()
-
         # TODO this should be deleted before posting
         self.transform_helper.fix_map_to_odom_transform(msg.pose.pose,
                                                         msg.header.stamp)
@@ -108,14 +103,12 @@ class ParticleFilterROS(object):
             self.pf_.update(delta)
             self.last_odom_ = odom
 
-        best = None
         if scan is not None:
             ps = self.pf_.particles
             if np.linalg.norm(self.delta_[:2]) > 0.1 or self.delta_[2] > np.deg2rad(10):
                 # only update moved 10cm or 10 deg
 
                 # reset delta
-                self.delta_ *= 0
 
                 ws = self.pm_.match(self.pf_.particles, scan)
                 #print('ws', ws)
@@ -123,7 +116,10 @@ class ParticleFilterROS(object):
 
                 #plt.show()
                 if ws is not None:
-                    best = self.pf_.resample(ws, noise=[0.05,0.05,0.01])
+                    self.delta_ *= 0
+                    self.pf_.resample(ws, noise=[0.05,0.05,0.01])
+
+        best = self.pf_.best
 
         good_idx = np.argsort(self.pf_.weights_)[::-1]
 
