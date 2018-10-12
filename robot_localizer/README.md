@@ -40,7 +40,7 @@ Testing the particle filter was done by first manually driving the neato just ou
 
 The provided implementation of OccupancyField.py used the SKlearn package to measure distance to the closest particle. To increase speed and lower computational resources required, we opted to use the Open CV2 distanceTransform function. This proved to be a significant improvement that reduced the amount of time required to wait for filter preprocessing initialization.
 
-|![bench](figs/oc_bench)|
+|![bench](figs/oc_bench.png)|
 |:-:|
 |Fig. 5. Comparison between nearest-neighbor based occupancy field matcher in scikit-learn and Distancetransform-based implementation in opencv.|
 
