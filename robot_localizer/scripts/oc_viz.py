@@ -31,23 +31,27 @@ def main():
     print px, py
 
     m = of.map_
+    m[m==-1] = 64 
+    m = m.astype(np.uint8)
     v = of.dist_
 
-    # fig, (ax0,ax1) = plt.subplots(1,2)
-    fig, (ax0) = plt.subplots(1,1)
-    p = ax0.imshow(v, origin='lower')
-    ax0.scatter([ox],[oy])
-    ax0.scatter([px],[py])
-    ax0.set_xlabel('x')
-    ax0.set_ylabel('y')
+    fig, (ax0,ax1) = plt.subplots(1,2, sharey=True)
+    fig.suptitle('Occupancy Field Visualization')
 
-    divider = make_axes_locatable(ax0)
+    ax0.imshow(m, origin='lower', cmap='Greys')
+    ax0.plot([ox],[oy], 'r+')
+    #ax0.scatter([px],[py])
+
+    p = ax1.imshow(v, origin='lower')
+    ax1.plot([ox],[oy], 'r+')
+    #ax1.scatter([px],[py])
+    ax0.set_xlabel('Original')
+    ax1.set_xlabel('Distance Transform')
+
+    divider = make_axes_locatable(ax1)
     cax = divider.append_axes('right', size='5%', pad=0.05)
     fig.colorbar(p, cax=cax)
 
-    # ax1.imshow(m, origin='lower')
-    # ax1.scatter([ox],[oy])
-    # ax1.scatter([px],[py])
     plt.show()
 
 if __name__ == "__main__":
