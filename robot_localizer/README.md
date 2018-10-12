@@ -17,63 +17,40 @@ The code architecture revolves around three key processing classes, which are `*
 
 The particle filter itself is fairly standard: it initializes with the given pose at the given "spread", which represents the uncertainty of the state at the point. After a cumulative motion of greater than **0.1m** or **10 degrees**, the particle filter weights are updated with the current scan-matched values and the particles are resampled accordingly. The resampling algorithm follows the algorithm as published by B.Massey (NOTE:  B.Massey, “Fast Perfect Weighted Resampling”, ICASSP, 2009) which claims an efficient O(m+n) weighted resampling for Bayesian Particle Filters.
 
-<table>
-  <tr>
-    <td></td>
-  </tr>
-  <tr>
-    <td>Fig. 2. Particle Filter evolution by iteration; cost function here is defined as the distance from the origin. Over time, we observe that the particles migrate towards (0,0) and converge to the correct solution.</td>
-  </tr>
-</table>
+|![evol](figs/particle_evolution.gif)|
+|:-:|
+|Fig. 2. Particle Filter evolution by iteration; cost function here is defined as the distance from the origin. Over time, we observe that the particles migrate towards (0,0) and converge to the correct solution.|
 
 
 One noteworthy aspect of the library is the layer of abstraction that the `ParticleMatcher` class provides, meaning that the preprocessing and filtering of the map and scan data could produce any arbitrary analogous feature for matching. In the interest of time and apparent stability, our implementation of the particle matcher incorporated a modified version of the provided `OccupancyField` library, which reduces the map into the minimum-distance feature representation. The distance is then transformed into the weight by comparing against the absolute difference with the lidar-scan values. The visualization of the said transform can be seen in Fig.3.
 
-<table>
-  <tr>
-    <td></td>
-  </tr>
-  <tr>
-    <td>Fig. 3. "Occupancy Field" distance transform visualization from the map data; crosshair in red marks the map origin.</td>
-  </tr>
-</table>
-
+|![stab](figs/ocviz.png)|
+|:-:|
+|Fig. 3. "Occupancy Field" distance transform visualization from the map data; crosshair in red marks the map origin.|
 
 To simplify the main code, all the ROS interactions are handled by the **RosBoss** class.  This class reads the odom and laserscan topics, and handles publishing the particles and best particles.  It is instantiated in the main pf.py run, and handles these two functions specifically.  
 
 Testing the particle filter was done by first manually driving the neato just outside AC109 and generating a map file. After obtaining a solid map, the file is saved and then opened up as the reference.  While running the particle filter in rviz and setting an initial estimate, the neato is then driven around, comparing the scans to the map from earlier and localizing itself.
 
-<table>
-  <tr>
-    <td></td>
-  </tr>
-  <tr>
-    <td>Fig.4. Stability comparison of the particle filter with ground-truth information; note that the solution does not diverge further than 30cm from the correct location, and correctly converges at the end.</td>
-  </tr>
-</table>
-
+|![stab](figs/pf_stability.png)|
+|:-:|
+|Fig.4. Stability comparison of the particle filter with ground-truth information; note that the solution does not diverge further than 30cm from the correct location, and correctly converges at the end.|
 
 ## Design Decisions
 
-The provided implementation of Occupancy_Field.py used the SKlearn package to measure distance to the closest particle. To increase speed and lower computational resources required, we opted to use the Open CV2 distanceTransform function. This proved to be a significant improvement that reduced the amount of time required to wait for filter preprocessing initialization.
+The provided implementation of OccupancyField.py used the SKlearn package to measure distance to the closest particle. To increase speed and lower computational resources required, we opted to use the Open CV2 distanceTransform function. This proved to be a significant improvement that reduced the amount of time required to wait for filter preprocessing initialization.
 
-<table>
-  <tr>
-    <td></td>
-  </tr>
-  <tr>
-    <td>Fig. 5. Comparison between nearest-neighbor based occupancy field matcher in scikit-learn and Distancetransform-based implementation in opencv.</td>
-  </tr>
-</table>
-
+|![bench](figs/oc_bench)|
+|:-:|
+|Fig. 5. Comparison between nearest-neighbor based occupancy field matcher in scikit-learn and Distancetransform-based implementation in opencv.|
 
 On part of some basic processing filters on incoming data, we initially set up a check to see if the scan length was less than 0 to avoid errors. However, by simply changing the 0 to a 5, we were able to filter out scans with few data points from increasing the error through bias, leading to a more robust system.
 
 Three options were provided for distance discrepancy to weight transformations: taking the inverse, subtracting from the maximum, and taking the negative exponential. In practice, the exponential version proved to be more stable, and retained the desirable property that at zero distance the probability is 1 and the taper rate could be configured exactly - while there’s no probabilistic justification for the former two. During testing, taking the inverse did prove to be slightly more difficult to work with when numbers approach 0, or were 0.  Subtracting from a maximum allowed for more robust code but the results were less deterministic; the negative-exponential function proved to be most numerically stable and statistically meaningful.
 
-![image alt text](image_0.png)
-
-*Figure 6. Code Architecture showcasing the various files that pf.py was split.  Splitting into multiple files allowed for a more discrete workflow.*
+|![arch](figs/code_architecture.png)|
+|:-:|
+|Figure 6. Code Architecture showcasing the various files that pf.py was split.  Splitting into multiple files allowed for a more discrete workflow.|
 
 As mentioned earlier, the main ros binding file, pf.py, had its main functions separated into other modules.  Doing so allowed cleaner code writing by calling class methods of the sub-module within pf.py, as well as an easier time developing due to isolating merge errors.  Limiting interactions to only class methods also allowed better code quality by ensuring each module’s working independence, thus isolating potential errors to single modules without worry about creating more errors in the process of debugging.
 
