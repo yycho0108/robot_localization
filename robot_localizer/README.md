@@ -13,7 +13,7 @@ In this project, we implement a particle filter for robot localization with onli
 
 ## Problem Solving, Code Structure, Code Implementation
 
-The code architecture revolves around three key processing classes, which are `**ParticleFilter`**, `**ParticleMatcher`**, and `**RosBoss`**. All algorithmic implementations sought to provide a framework-agnostic routines by having minimal dependencies on ROS, where RosBoss handled all basic ROS communications and conversions. Finally, `**pf.py**` provided the ROS Node binding for all three processing handles to expose AMCL-like interface to the end user.
+The code architecture revolves around three key processing classes, which are `ParticleFilter`, `ParticleMatcher`, and `RosBoss`. All algorithmic implementations sought to provide a framework-agnostic routines by having minimal dependencies on ROS, where RosBoss handled all basic ROS communications and conversions. Finally, `pf.py` provided the ROS Node binding for all three processing handles to expose AMCL-like interface to the end user.
 
 The particle filter itself is fairly standard: it initializes with the given pose at the given "spread", which represents the uncertainty of the state at the point. After a cumulative motion of greater than **0.1m** or **10 degrees**, the particle filter weights are updated with the current scan-matched values and the particles are resampled accordingly. The resampling algorithm follows the algorithm as published by B.Massey (NOTE:  B.Massey, “Fast Perfect Weighted Resampling”, ICASSP, 2009) which claims an efficient O(m+n) weighted resampling for Bayesian Particle Filters.
 
@@ -28,7 +28,7 @@ One noteworthy aspect of the library is the layer of abstraction that the `Parti
 |:-:|
 |Fig. 3. "Occupancy Field" distance transform visualization from the map data; crosshair in red marks the map origin.|
 
-To simplify the main code, all the ROS interactions are handled by the **RosBoss** class.  This class reads the odom and laserscan topics, and handles publishing the particles and best particles.  It is instantiated in the main pf.py run, and handles these two functions specifically.  
+To simplify the main code, all the ROS interactions are handled by the `RosBoss` class.  This class reads the odom and laserscan topics, and handles publishing the particles and best particles.  It is instantiated in the main pf.py run, and handles these two functions specifically.  
 
 Testing the particle filter was done by first manually driving the neato just outside AC109 and generating a map file. After obtaining a solid map, the file is saved and then opened up as the reference.  While running the particle filter in rviz and setting an initial estimate, the neato is then driven around, comparing the scans to the map from earlier and localizing itself.
 
